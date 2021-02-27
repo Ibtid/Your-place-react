@@ -1,39 +1,48 @@
-import React from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
-import PlaceList from "../components/PlaceList";
+import PlaceList from '../components/PlaceList';
+import ErrorModal from '../../shared/components/UIElements/ErrorModal/ErrorModal';
+import LoadingSpinner from '../../shared/components/UIElements/LoadingSpinner/LoadingSpinner';
+import { useHttpClient } from '../../shared/hooks/http-hook';
 
-const DUMMY_PLACES = [
-  {
-    id: "p1",
-    title: "Empire State Building",
-    description: "One of the most famous sky scrappers in the world!",
-    imageUrl:
-      "https://cropper.watch.aetnd.com/public-content-aetn.video.aetnd.com/video-thumbnails/AETN-History_VMS/21/202/tdih-may01-HD.jpg?w=1440",
-    address: "20 W 34th St, New York, NY 10001, United States",
-
-    latitude: 40.7484405,
-    longitude: -73.9878584,
-
-    creator: "u1",
-  },
-  {
-    id: "p2",
-    title: "River Thames",
-    description:
-      "The River Thames, known alternatively in parts as the Isis, is a river that flows through southern England including London. At 215 miles, it is the longest river entirely in England and the second-longest in the United Kingdom, after the River Severn. It flows through Oxford, Reading, Henley-on-Thames and Windsor.",
-    imageUrl:
-      "https://newseu.cgtn.com/news/7a517a4e3041544e34417a4d774d6a4e314d7a4e31457a6333566d54/img/5566c22cd5da41b2a7695a97d3cf61c0/5566c22cd5da41b2a7695a97d3cf61c0.jpg",
-    address: "Cities: London, Oxford, Henley-on-Thames, Reading, Windsor",
-    latitude: 51.585574,
-    longitude: -0.616075,
-    creator: "u2",
-  },
-];
 const UserPlaces = () => {
+  const [loadedPlaces, setLoadedPlaces] = useState();
+  const { isLoading, error, sendRequest, clearError } = useHttpClient();
+
   const userId = useParams().userId;
-  const loadedPlaces = DUMMY_PLACES.filter((place) => place.creator === userId);
-  return <PlaceList items={loadedPlaces} />;
+
+  useEffect(() => {
+    const fetchPlaces = async () => {
+      try {
+        const responseData = await sendRequest(
+          `http://localhost:5000/api/places/user/${userId}`
+        );
+        setLoadedPlaces(responseData.places);
+      } catch (err) {}
+    };
+    fetchPlaces();
+  }, [sendRequest, userId]);
+
+  const placeDeletedHandler = (deletedPlaceId) => {
+    setLoadedPlaces((prevPlaces) => {
+      prevPlaces.filter((place) => place.id !== deletedPlaceId);
+    });
+  };
+
+  return (
+    <React.Fragment>
+      <ErrorModal error={error} onClear={clearError} />
+      {isLoading && (
+        <div className='center'>
+          <LoadingSpinner />
+        </div>
+      )}
+      {!isLoading && loadedPlaces && (
+        <PlaceList items={loadedPlaces} onDeletePlace={placeDeletedHandler} />
+      )}
+    </React.Fragment>
+  );
 };
 
 export default UserPlaces;
